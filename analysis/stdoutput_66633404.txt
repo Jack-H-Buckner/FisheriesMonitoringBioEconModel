@@ -1,0 +1,49 @@
+==========================================
+SLURM_JOB_ID = 66633404
+SLURM_NODELIST = cpu-3-51
+==========================================
+Unloading openmpi/4.1.5
+Unloading slurm/22.05.8
+Loading slurm/22.05.8
+Loading openmpi/4.1.5
+Run: 
+Loading julia/1.9.0
+ERROR: LoadError: ArgumentError: Package Roots not found in current path.
+- Run `import Pkg; Pkg.add("Roots")` to install the Roots package.
+Stacktrace:
+ [1] macro expansion
+   @ ./loading.jl:1595 [inlined]
+ [2] macro expansion
+   @ ./lock.jl:267 [inlined]
+ [3] require(into::Module, mod::Symbol)
+   @ Base ./loading.jl:1576
+ [4] include(fname::String)
+   @ Base.MainInclude ./client.jl:478
+ [5] top-level scope
+   @ ~/SurplusProductionModel/FARM/surplus_production_example_VoI.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/FARM/SurplusProduction.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/FARM/surplus_production_example_VoI.jl:1
+
+############### Job 66633404 summary ###############
+Name                : VoI
+User                : jhbuckne
+Account             : baskettgrp
+Partition           : med2
+Nodes               : cpu-3-51
+Cores               : 10
+GPUs                : 0
+State               : FAILED
+ExitCode            : 1:0
+Submit              : 2023-06-21T12:34:37
+Start               : 2023-06-21T12:34:43
+End                 : 2023-06-21T12:35:02
+Waited              : 00:00:06
+Reserved walltime   : 06:00:00
+Used walltime       : 00:00:19
+Used CPU time       : 00:00:05
+% User (Computation): 74.91%
+% System (I/O)      : 25.07%
+Mem reserved        : 10000M
+Max Mem used        : 24.00K (cpu-3-51)
+Max Disk Write      : 0.00  (cpu-3-51)
+Max Disk Read       : 10.24K (cpu-3-51)

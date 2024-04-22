@@ -1,0 +1,44 @@
+==========================================
+SLURM_JOB_ID = 59294917
+SLURM_NODELIST = c6-68
+==========================================
+cat: FisheryModel_FarmRun.jl: No such file or directory
+ok now for the actual standard output
+Module julia/1.8.2 loaded 
+ERROR: LoadError: ArgumentError: Package Distributions not found in current path.
+- Run `import Pkg; Pkg.add("Distributions")` to install the Distributions package.
+Stacktrace:
+ [1] macro expansion
+   @ ./loading.jl:1163 [inlined]
+ [2] macro expansion
+   @ ./lock.jl:223 [inlined]
+ [3] require(into::Module, mod::Symbol)
+   @ Base ./loading.jl:1144
+ [4] include(fname::String)
+   @ Base.MainInclude ./client.jl:476
+ [5] top-level scope
+   @ ~/SurplusProductionModel/FARM/surplus_production_sims.jl:2
+in expression starting at /home/jhbuckne/SurplusProductionModel/FARM/SurplusProduction.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/FARM/surplus_production_sims.jl:2
+Name                : tests
+User                : jhbuckne
+Account             : adamgrp
+Partition           : med2
+Nodes               : c6-68
+Cores               : 1
+GPUs                : 0
+State               : FAILED
+ExitCode            : 1:0
+Submit              : 2022-12-14T15:16:19
+Start               : 2022-12-14T15:20:26
+End                 : 2022-12-14T15:20:31
+Waited              : 00:04:07
+Reserved walltime   : 00:10:00
+Used walltime       : 00:00:05
+Used CPU time       : 00:00:03
+% User (Computation): 81.15%
+% System (I/O)      :  0.00%
+Mem reserved        : 1000M
+Max Mem used        : 0.00  (c6-68)
+Max Disk Write      : 0.00  (c6-68)
+Max Disk Read       : 0.00  (c6-68)

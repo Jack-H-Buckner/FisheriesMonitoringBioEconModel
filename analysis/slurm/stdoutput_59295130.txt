@@ -1,0 +1,198 @@
+==========================================
+SLURM_JOB_ID = 59295130
+SLURM_NODELIST = c4-92
+==========================================
+# this file runs closed loop simulations to test the performance of alternative polcies
+import Pkg; Pkg.add("NLsolve");Pkg.add("FastGaussQuadrature"); Pkg.add("Interpolations")
+Pkg.add("KalmanFilters"); Pkg.add("TickTock")
+include("SurplusProduction.jl")
+include("../src/ParticleFilters.jl")
+include("../src/BeliefStateTransitions.jl")
+using Distributions
+
+println(Threads.nthreads())
+    
+# define model and solve MDP
+Fmsy= 0.2; price=1.0;sigma_a=0.1;sigma_p=1.5;NMVmax = 1.0;Sigma_N=0.05
+MSY=10;pstar=0.4;c1 = 1.0/Fmsy;c2=0.0085
+c3=2.0;b=2*Fmsy/MSY;discount=0.05;SigmaN=0.05
+model=SurplusProduction.init_model(MSY,Fmsy,pstar,SigmaN,sigma_a,sigma_p,c1,c2,c3,b,
+                                        NMVmax*MSY,discount;price=price,N=2,actions=[1,2],CVmax=1.05)
+
+
+# define alternative policies 
+function steps(s, Bhat_breaks, sigma_levels)
+    
+    if s[1][1] < Bhat_breaks[1]
+        if s[2][1,1] > sigma_levels[1]
+            return 2
+        else
+            return 1
+        end 
+    elseif s[1][1] <Bhat_breaks[2]
+        if s[2][1,1] > sigma_levels[2]
+            return 2
+        else
+            return 1
+        end 
+    else
+        if s[2][1,1] > sigma_levels[3]
+            return 2
+        else
+            return 1
+        end 
+    end 
+    
+end 
+
+
+function NPV(B0, sigma0, P,delta, T, model, R;Nfilter = 500)
+    
+    filter = BeliefStateTransitions.ParticleFilters.init(Nfilter,Distributions.MvNormal([log(B0)],[sigma0;;]))#sigma0
+    x0 = [rand(Distributions.Normal(log(B0), sqrt(sigma0)))]
+    s0 = ([log(B0)],[sigma0;;])
+    dat = BeliefStateTransitions.simulation(x0,s0,T,filter,P,model,R)
+    if dat =="failed"
+        return dat
+    end 
+        
+    return sum(broadcast(t -> dat[5][t] * delta^t, 1:T))
+    
+end 
+    
+function ENPV(B0, sigma0, P,delta, T, NMC, model,  R;Nfilter = 500)
+    
+    acc = zeros(NMC)
+            count = 0
+    Threads.@threads for i in 1:NMC
+        if mod(i,50) == 0
+            print(i, " ")
+        end 
+        npv = NPV(B0, sigma0, P,delta, T, model, R;Nfilter = Nfilter)
+        if npv != "failed"
+            count += 1
+            acc[i] =npv 
+        else
+            print("failed")   
+        end
+    end 
+              
+    return acc
+        
+end 
+                        
+policy1=  s -> model.Policy([s[1][1],s[2][1,1]])
+policy2 = s -> steps(s, log.([25.0,50.0]), [log(0.388^2+1),log(0.388^2+1),log(0.388^2+1)])
+policy3 = s -> steps(s, log.([25.0,55.0]), [log(0.2^2+1),log(0.388^2+1),log(0.388^2+1)])
+policy4 = s -> steps(s, log.([25.0,55.0]), [log(0.2^2+1),log(0.388^2+1),log(0.55^2+1)])
+Policies = [policy1,policy2,policy3,policy4]  
+                        
+B0 = [11,50,110]
+sigma0 = [0.0606, 0.1315, 0.223]
+                   
+function main(model,policies,discount,B0,sigma0;NMC = 10,T=10)
+    delta = 1/(1+discount)
+    
+    acc = zeros(9*4,NMC)
+    num_iter=0                     
+    for init in Iterators.product(B0,sigma0)
+        for p in Policies
+            num_iter+=1
+            acc[num_iter,:] = ENPV(init[1],init[2],p,delta,T,NMC,model.mod,model.Returns;Nfilter = 500)
+        end 
+    end 
+    return acc
+end 
+
+using CSV
+using Tables
+results = main(model,Policies,0.05,B0,sigma0)
+CSV.write("data/alt_policies_performance.csv",Tables.table(results);sep=',')
+ok now for the actual standard output
+Module julia/1.8.2 loaded 
+    Updating registry at `~/.julia/registries/General.toml`
+   Resolving package versions...
+  No Changes to `~/.julia/environments/v1.8/Project.toml`
+  No Changes to `~/.julia/environments/v1.8/Manifest.toml`
+   Resolving package versions...
+  No Changes to `~/.julia/environments/v1.8/Project.toml`
+  No Changes to `~/.julia/environments/v1.8/Manifest.toml`
+   Resolving package versions...
+  No Changes to `~/.julia/environments/v1.8/Project.toml`
+  No Changes to `~/.julia/environments/v1.8/Manifest.toml`
+   Resolving package versions...
+  No Changes to `~/.julia/environments/v1.8/Project.toml`
+  No Changes to `~/.julia/environments/v1.8/Manifest.toml`
+   Resolving package versions...
+   Installed TickTock ─ v1.2.0
+    Updating `~/.julia/environments/v1.8/Project.toml`
+  [9ff05d80] + TickTock v1.2.0
+    Updating `~/.julia/environments/v1.8/Manifest.toml`
+  [9ff05d80] + TickTock v1.2.0
+Precompiling project...
+[32m  ✓ [39mTickTock
+  1 dependency successfully precompiled in 0 seconds. 74 already precompiled.
+   Resolving package versions...
+  No Changes to `~/.julia/environments/v1.8/Project.toml`
+  No Changes to `~/.julia/environments/v1.8/Manifest.toml`
+   Resolving package versions...
+  No Changes to `~/.julia/environments/v1.8/Project.toml`
+  No Changes to `~/.julia/environments/v1.8/Manifest.toml`
+ERROR: LoadError: ArgumentError: Package StatsBase not found in current path.
+- Run `import Pkg; Pkg.add("StatsBase")` to install the StatsBase package.
+Stacktrace:
+  [1] macro expansion
+    @ ./loading.jl:1163 [inlined]
+  [2] macro expansion
+    @ ./lock.jl:223 [inlined]
+  [3] require(into::Module, mod::Symbol)
+    @ Base ./loading.jl:1144
+  [4] include(mod::Module, _path::String)
+    @ Base ./Base.jl:419
+  [5] include(x::String)
+    @ Main.SurplusProduction.MDPsolver.BeliefStateTransitions ~/SurplusProductionModel/src/BeliefStateTransitions.jl:1
+  [6] top-level scope
+    @ ~/SurplusProductionModel/src/BeliefStateTransitions.jl:828
+  [7] include(mod::Module, _path::String)
+    @ Base ./Base.jl:419
+  [8] include(x::String)
+    @ Main.SurplusProduction.MDPsolver ~/SurplusProductionModel/src/MDPsolver.jl:1
+  [9] top-level scope
+    @ ~/SurplusProductionModel/src/MDPsolver.jl:5
+ [10] include(mod::Module, _path::String)
+    @ Base ./Base.jl:419
+ [11] include(x::String)
+    @ Main.SurplusProduction ~/SurplusProductionModel/FARM/SurplusProduction.jl:1
+ [12] top-level scope
+    @ ~/SurplusProductionModel/FARM/SurplusProduction.jl:360
+ [13] include(fname::String)
+    @ Base.MainInclude ./client.jl:476
+ [14] top-level scope
+    @ ~/SurplusProductionModel/FARM/surplus_production_sims.jl:4
+in expression starting at /home/jhbuckne/SurplusProductionModel/src/ParticleFilters.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/src/BeliefStateTransitions.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/src/MDPsolver.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/FARM/SurplusProduction.jl:1
+in expression starting at /home/jhbuckne/SurplusProductionModel/FARM/surplus_production_sims.jl:4
+Name                : tests
+User                : jhbuckne
+Account             : adamgrp
+Partition           : med2
+Nodes               : c4-92
+Cores               : 1
+GPUs                : 0
+State               : FAILED
+ExitCode            : 1:0
+Submit              : 2022-12-14T15:45:49
+Start               : 2022-12-14T15:47:13
+End                 : 2022-12-14T15:47:44
+Waited              : 00:01:24
+Reserved walltime   : 00:30:00
+Used walltime       : 00:00:31
+Used CPU time       : 00:00:20
+% User (Computation): 89.55%
+% System (I/O)      : 10.45%
+Mem reserved        : 1000M
+Max Mem used        : 420.38M (c4-92)
+Max Disk Write      : 10.24K (c4-92)
+Max Disk Read       : 4.12M (c4-92)
